@@ -1,1 +1,29 @@
+# ============================================
+# MINIMAL REQUIREMENTS
+# For Google Colab / Basic Usage
+# ============================================
 
+# Core ML & Data Processing
+scikit-learn==1.3.2
+pandas==2.1.4
+numpy==1.26.2
+scipy==1.11.4
+
+# Imbalanced Data Handling
+imbalanced-learn==0.11.0
+
+# Visualization
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Model Persistence
+joblib==1.3.2
+
+# Web Dashboard (Optional - comment out if not needed)
+Flask==3.0.0
+Flask-CORS==4.0.0
+
+# ============================================
+# INSTALLATION COMMAND
+# ============================================
+# pip install -r requirements-minimal.txt
