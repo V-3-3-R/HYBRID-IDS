@@ -1,1 +1,193 @@
+# ============================================
+# SNORT RULES FOR HYBRID IDS
+# Signature-Based Detection Rules
+# ============================================
 
+# -----------------------
+# 1. DOS/DDOS ATTACKS
+# -----------------------
+
+# SYN Flood Detection
+alert tcp any any -> $HOME_NET any (msg:"POSSIBLE TCP SYN FLOOD"; flags:S; threshold:type both, track by_dst, count 100, seconds 1; classtype:attempted-dos; sid:1000001; rev:1;)
+
+# ICMP Flood Detection
+alert icmp any any -> $HOME_NET any (msg:"POSSIBLE ICMP FLOOD"; threshold:type both, track by_dst, count 50, seconds 1; classtype:attempted-dos; sid:1000002; rev:1;)
+
+# UDP Flood Detection
+alert udp any any -> $HOME_NET any (msg:"POSSIBLE UDP FLOOD"; threshold:type both, track by_dst, count 100, seconds 1; classtype:attempted-dos; sid:1000003; rev:1;)
+
+# HTTP Flood (Slowloris)
+alert tcp any any -> $HOME_NET 80 (msg:"POSSIBLE SLOWLORIS ATTACK"; flow:to_server,established; content:"POST"; http_method; detection_filter:track by_src, count 50, seconds 10; classtype:attempted-dos; sid:1000004; rev:1;)
+
+# DNS Amplification Attack
+alert udp any 53 -> $HOME_NET any (msg:"DNS AMPLIFICATION ATTACK"; byte_test:2,>,512,2; threshold:type both, track by_dst, count 10, seconds 5; classtype:attempted-dos; sid:1000005; rev:1;)
+
+# -----------------------
+# 2. PORT SCANNING
+# -----------------------
+
+# TCP Port Scan (Connect Scan)
+alert tcp any any -> $HOME_NET any (msg:"TCP PORT SCAN DETECTED"; flags:S; threshold:type both, track by_src, count 20, seconds 10; classtype:attempted-recon; sid:1000010; rev:1;)
+
+# SYN Scan Detection
+alert tcp any any -> $HOME_NET any (msg:"SYN SCAN DETECTED"; flags:S; threshold:type both, track by_src, count 15, seconds 5; classtype:attempted-recon; sid:1000011; rev:1;)
+
+# FIN Scan Detection
+alert tcp any any -> $HOME_NET any (msg:"FIN SCAN DETECTED"; flags:F; threshold:type both, track by_src, count 15, seconds 5; classtype:attempted-recon; sid:1000012; rev:1;)
+
+# XMAS Scan Detection
+alert tcp any any -> $HOME_NET any (msg:"XMAS SCAN DETECTED"; flags:FPU; threshold:type both, track by_src, count 10, seconds 5; classtype:attempted-recon; sid:1000013; rev:1;)
+
+# NULL Scan Detection
+alert tcp any any -> $HOME_NET any (msg:"NULL SCAN DETECTED"; flags:0; threshold:type both, track by_src, count 10, seconds 5; classtype:attempted-recon; sid:1000014; rev:1;)
+
+# UDP Port Scan
+alert udp any any -> $HOME_NET any (msg:"UDP PORT SCAN DETECTED"; threshold:type both, track by_src, count 25, seconds 10; classtype:attempted-recon; sid:1000015; rev:1;)
+
+# -----------------------
+# 3. SQL INJECTION
+# -----------------------
+
+# SQL Injection - UNION SELECT
+alert tcp any any -> $HOME_NET 80 (msg:"SQL INJECTION - UNION SELECT"; flow:to_server,established; content:"UNION"; nocase; content:"SELECT"; nocase; distance:0; classtype:web-application-attack; sid:1000020; rev:1;)
+
+# SQL Injection - OR 1=1
+alert tcp any any -> $HOME_NET 80 (msg:"SQL INJECTION - OR 1=1"; flow:to_server,established; pcre:"/(\%27)|(\')|(\-\-)|(\%23)|(#)/i"; content:"OR"; nocase; content:"1=1"; nocase; classtype:web-application-attack; sid:1000021; rev:1;)
+
+# SQL Injection - Comment Injection
+alert tcp any any -> $HOME_NET 80 (msg:"SQL INJECTION - COMMENT"; flow:to_server,established; pcre:"/((\%27)|(\')).*(--)|((\%3D)|=)[^\n]*((\%27)|(\')|(--)|(\%3B)|(;))/i"; classtype:web-application-attack; sid:1000022; rev:1;)
+
+# SQL Injection - Database Enumeration
+alert tcp any any -> $HOME_NET 80 (msg:"SQL INJECTION - DATABASE ENUMERATION"; flow:to_server,established; content:"information_schema"; nocase; classtype:web-application-attack; sid:1000023; rev:1;)
+
+# Blind SQL Injection
+alert tcp any any -> $HOME_NET 80 (msg:"BLIND SQL INJECTION ATTEMPT"; flow:to_server,established; pcre:"/sleep\(|benchmark\(|waitfor\s+delay/i"; classtype:web-application-attack; sid:1000024; rev:1;)
+
+# -----------------------
+# 4. BRUTE FORCE ATTACKS
+# -----------------------
+
+# SSH Brute Force
+alert tcp any any -> $HOME_NET 22 (msg:"SSH BRUTE FORCE ATTEMPT"; flow:to_server,established; content:"SSH"; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:1000030; rev:1;)
+
+# FTP Brute Force
+alert tcp any any -> $HOME_NET 21 (msg:"FTP BRUTE FORCE ATTEMPT"; flow:to_server,established; content:"530 Login incorrect"; threshold:type threshold, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:1000031; rev:1;)
+
+# HTTP Authentication Brute Force
+alert tcp any any -> $HOME_NET 80 (msg:"HTTP BRUTE FORCE ATTEMPT"; flow:to_server,established; content:"401 Unauthorized"; threshold:type threshold, track by_src, count 10, seconds 60; classtype:attempted-admin; sid:1000032; rev:1;)
+
+# RDP Brute Force
+alert tcp any any -> $HOME_NET 3389 (msg:"RDP BRUTE FORCE ATTEMPT"; flow:to_server,established; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:1000033; rev:1;)
+
+# MySQL Brute Force
+alert tcp any any -> $HOME_NET 3306 (msg:"MYSQL BRUTE FORCE ATTEMPT"; flow:to_server,established; content:"Access denied"; threshold:type threshold, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:1000034; rev:1;)
+
+# -----------------------
+# 5. WEB ATTACKS
+# -----------------------
+
+# Cross-Site Scripting (XSS)
+alert tcp any any -> $HOME_NET 80 (msg:"XSS ATTACK DETECTED"; flow:to_server,established; content:"<script"; nocase; classtype:web-application-attack; sid:1000040; rev:1;)
+
+# XSS - Event Handler
+alert tcp any any -> $HOME_NET 80 (msg:"XSS - EVENT HANDLER"; flow:to_server,established; pcre:"/on(load|error|click|mouse)/i"; classtype:web-application-attack; sid:1000041; rev:1;)
+
+# Remote File Inclusion (RFI)
+alert tcp any any -> $HOME_NET 80 (msg:"REMOTE FILE INCLUSION"; flow:to_server,established; pcre:"/(http|https|ftp):\/\//i"; content:"include"; nocase; classtype:web-application-attack; sid:1000042; rev:1;)
+
+# Local File Inclusion (LFI)
+alert tcp any any -> $HOME_NET 80 (msg:"LOCAL FILE INCLUSION"; flow:to_server,established; content:"../"; classtype:web-application-attack; sid:1000043; rev:1;)
+
+# Path Traversal
+alert tcp any any -> $HOME_NET 80 (msg:"PATH TRAVERSAL ATTACK"; flow:to_server,established; pcre:"/\.\.[\/\\]/"; classtype:web-application-attack; sid:1000044; rev:1;)
+
+# Command Injection
+alert tcp any any -> $HOME_NET 80 (msg:"COMMAND INJECTION ATTEMPT"; flow:to_server,established; pcre:"/(;|\||`|\$\()/"; classtype:web-application-attack; sid:1000045; rev:1;)
+
+# XML External Entity (XXE)
+alert tcp any any -> $HOME_NET 80 (msg:"XXE ATTACK DETECTED"; flow:to_server,established; content:"<!ENTITY"; nocase; content:"SYSTEM"; nocase; classtype:web-application-attack; sid:1000046; rev:1;)
+
+# -----------------------
+# 6. BUFFER OVERFLOW
+# -----------------------
+
+# Buffer Overflow - General
+alert tcp any any -> $HOME_NET any (msg:"POSSIBLE BUFFER OVERFLOW"; flow:to_server,established; dsize:>2048; classtype:attempted-admin; sid:1000050; rev:1;)
+
+# NOP Sled Detection
+alert tcp any any -> $HOME_NET any (msg:"NOP SLED DETECTED"; flow:to_server,established; content:"|90 90 90 90 90 90 90 90|"; classtype:shellcode-detect; sid:1000051; rev:1;)
+
+# -----------------------
+# 7. MALWARE & EXPLOITS
+# -----------------------
+
+# Shellcode Detection
+alert tcp any any -> $HOME_NET any (msg:"SHELLCODE DETECTED"; flow:to_server,established; content:"|eb 1f 5e 89 76 08 31 c0|"; classtype:shellcode-detect; sid:1000060; rev:1;)
+
+# EternalBlue (MS17-010)
+alert tcp any any -> $HOME_NET 445 (msg:"ETERNALBLUE EXPLOIT ATTEMPT"; flow:to_server,established; content:"|fe 53 4d 42|"; offset:4; depth:4; classtype:attempted-admin; sid:1000061; rev:1;)
+
+# Wannacry Ransomware
+alert tcp any any -> $HOME_NET 445 (msg:"WANNACRY RANSOMWARE DETECTED"; flow:to_server,established; content:"tasksche.exe"; classtype:trojan-activity; sid:1000062; rev:1;)
+
+# -----------------------
+# 8. RECONNAISSANCE
+# -----------------------
+
+# NMAP OS Detection
+alert tcp any any -> $HOME_NET any (msg:"NMAP OS DETECTION"; flags:SF12; window:1024; classtype:attempted-recon; sid:1000070; rev:1;)
+
+# NMAP Version Detection
+alert tcp any any -> $HOME_NET any (msg:"NMAP VERSION DETECTION"; flow:to_server,established; content:"GET / HTTP/1.0"; content:"User-Agent|3a| Nmap"; classtype:attempted-recon; sid:1000071; rev:1;)
+
+# DNS Zone Transfer Attempt
+alert tcp any any -> $HOME_NET 53 (msg:"DNS ZONE TRANSFER ATTEMPT"; flow:to_server,established; content:"|00 00 fc 00 01|"; classtype:attempted-recon; sid:1000072; rev:1;)
+
+# -----------------------
+# 9. DATA EXFILTRATION
+# -----------------------
+
+# Large Outbound Transfer
+alert tcp $HOME_NET any -> any any (msg:"LARGE DATA TRANSFER OUTBOUND"; flow:from_server,established; dsize:>50000; threshold:type both, track by_src, count 10, seconds 60; classtype:suspicious-filename-detect; sid:1000080; rev:1;)
+
+# DNS Tunneling
+alert udp $HOME_NET any -> any 53 (msg:"POSSIBLE DNS TUNNELING"; dsize:>512; threshold:type both, track by_src, count 20, seconds 60; classtype:policy-violation; sid:1000081; rev:1;)
+
+# -----------------------
+# 10. CUSTOM RULES
+# -----------------------
+
+# Suspicious User-Agent
+alert tcp any any -> $HOME_NET 80 (msg:"SUSPICIOUS USER-AGENT"; flow:to_server,established; content:"User-Agent|3a|"; content:"python-requests"; classtype:web-application-activity; sid:1000090; rev:1;)
+
+# Multiple Failed Login Attempts
+alert tcp any any -> $HOME_NET any (msg:"MULTIPLE FAILED LOGINS"; flow:to_server,established; content:"login failed"; threshold:type threshold, track by_src, count 5, seconds 60; classtype:suspicious-login; sid:1000091; rev:1;)
+
+# Suspicious Port Access
+alert tcp any any -> $HOME_NET 4444 (msg:"METASPLOIT DEFAULT PORT ACCESS"; flow:to_server; classtype:suspicious-filename-detect; sid:1000092; rev:1;)
+
+# ============================================
+# END OF SNORT RULES
+# ============================================
+
+# USAGE INSTRUCTIONS:
+# 1. Save this file as 'local.rules' in your Snort rules directory
+# 2. Add the following line to snort.conf:
+#    include $RULE_PATH/local.rules
+# 3. Update $HOME_NET variable to your network range
+# 4. Test rules: snort -T -c /etc/snort/snort.conf
+# 5. Run Snort: snort -A console -q -c /etc/snort/snort.conf -i eth0
+
+# RULE SYNTAX EXPLANATION:
+# alert: Action to take (alert, log, pass, drop, reject)
+# tcp/udp/icmp: Protocol
+# any any: Source IP and port
+# -> or <>: Direction
+# $HOME_NET any: Destination IP and port
+# msg: Alert message
+# flow: Connection state
+# content: Packet content to match
+# threshold: Rate limiting
+# classtype: Rule category
+# sid: Signature ID (unique)
+# rev: Rule revision number
