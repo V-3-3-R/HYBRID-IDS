@@ -1,0 +1,828 @@
+# 🚀 Complete Setup & Deployment Guide
+## Hybrid Intrusion Detection System
+
+---
+
+## Table of Contents
+1. [Quick Start (Google Colab)](#quick-start-google-colab)
+2. [Local Development Setup](#local-development-setup)
+3. [Production Deployment](#production-deployment)
+4. [Configuration Guide](#configuration-guide)
+5. [Testing & Validation](#testing--validation)
+6. [Troubleshooting](#troubleshooting)
+
+---
+
+## 1. Quick Start (Google Colab)
+
+### Option A: Single-Click Setup
+
+1. **Open Google Colab**: https://colab.research.google.com/
+
+2. **Create New Notebook** and run this cell:
+
+```python
+# Clone repository (if available) or copy code
+!git clone https://github.com/yourusername/hybrid-ids.git
+%cd hybrid-ids
+
+# Or simply paste the complete code from hybrid_ids_colab.py
+```
+
+3. **Run All Cells**: Runtime → Run All
+
+4. **View Results**: Scroll down to see:
+   - Model training progress
+   - Performance metrics
+   - Visualizations
+
+### Option B: Step-by-Step Execution
+
+**Cell 1: Install Dependencies**
+```python
+!pip install -q scikit-learn pandas numpy matplotlib seaborn imbalanced-learn joblib
+print("✅ Installation complete!")
+```
+
+**Cell 2: Download Dataset**
+```python
+!wget -q https://raw.githubusercontent.com/defcom17/NSL_KDD/master/KDDTrain%2B.txt
+!wget -q https://raw.githubusercontent.com/defcom17/NSL_KDD/master/KDDTest%2B.txt
+print("✅ Dataset downloaded!")
+```
+
+**Cell 3: Copy and Run Main Code**
+```python
+# Paste the complete code from hybrid_ids_colab.py here
+# Then run the cell
+```
+
+---
+
+## 2. Local Development Setup
+
+### Step 1: Prerequisites
+
+**System Requirements**:
+- Python 3.8 or higher
+- pip (Python package manager)
+- Git
+- 8GB RAM minimum
+- 10GB free disk space
+
+**Check Python Version**:
+```bash
+python --version  # Should be 3.8+
+```
+
+### Step 2: Create Project Directory
+
+```bash
+# Create project folder
+mkdir hybrid-ids
+cd hybrid-ids
+
+# Initialize git repository
+git init
+```
+
+### Step 3: Set Up Virtual Environment
+
+**Windows**:
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+**Linux/Mac**:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+You should see `(venv)` in your terminal prompt.
+
+### Step 4: Create Project Structure
+
+```bash
+# Create directory structure
+mkdir -p data/{raw,processed,models}
+mkdir -p src
+mkdir -p signatures
+mkdir -p tests
+mkdir -p logs
+mkdir -p templates
+
+# Create empty files
+touch src/__init__.py
+touch src/preprocessing.py
+touch src/signature_detection.py
+touch src/anomaly_detection.py
+touch src/fusion_logic.py
+touch src/visualization.py
+touch app.py
+touch requirements.txt
+touch README.md
+```
+
+### Step 5: Create requirements.txt
+
+```bash
+cat > requirements.txt << EOF
+# Core Dependencies
+scikit-learn>=1.3.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.14.0
+
+# Machine Learning
+imbalanced-learn>=0.11.0
+joblib>=1.3.0
+tensorflow>=2.13.0  # Optional for deep learning
+
+# Web Framework
+flask>=2.3.0
+flask-cors>=4.0.0
+
+# Data Processing
+scipy>=1.10.0
+
+# Utilities
+python-dotenv>=1.0.0
+click>=8.1.0
+
+# Development
+pytest>=7.3.0
+black>=23.3.0
+flake8>=6.0.0
+EOF
+```
+
+### Step 6: Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Step 7: Download Dataset
+
+```bash
+# Download NSL-KDD dataset
+cd data/raw
+wget https://raw.githubusercontent.com/defcom17/NSL_KDD/master/KDDTrain%2B.txt
+wget https://raw.githubusercontent.com/defcom17/NSL_KDD/master/KDDTest%2B.txt
+cd ../..
+```
+
+### Step 8: Copy Project Files
+
+Copy the following files from artifacts:
+- `hybrid_ids_colab.py` → Adapt into separate modules
+- `app.py` → Flask dashboard
+- `snort_rules.txt` → `signatures/snort_rules.txt`
+- `README.md` → Project root
+
+### Step 9: Run the System
+
+**Train Models**:
+```bash
+python src/anomaly_detection.py --train
+```
+
+**Start Web Dashboard**:
+```bash
+python app.py
+```
+
+**Access Dashboard**:
+Open browser: http://localhost:5000
+
+---
+
+## 3. Production Deployment
+
+### Option A: Docker Deployment
+
+#### Step 1: Create Dockerfile
+
+```dockerfile
+FROM python:3.9-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    libpcap-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p data/raw data/processed data/models logs
+
+# Download dataset
+RUN cd data/raw && \
+    wget https://raw.githubusercontent.com/defcom17/NSL_KDD/master/KDDTrain%2B.txt && \
+    wget https://raw.githubusercontent.com/defcom17/NSL_KDD/master/KDDTest%2B.txt
+
+# Expose port
+EXPOSE 5000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/api/stats || exit 1
+
+# Run application
+CMD ["python", "app.py"]
+```
+
+#### Step 2: Create docker-compose.yml
+
+```yaml
+version: '3.8'
+
+services:
+  ids-engine:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./models:/app/models
+    environment:
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+    restart: always
+    networks:
+      - ids-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - ids-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ids_db
+      POSTGRES_USER: ids_user
+      POSTGRES_PASSWORD: secure_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - ids-network
+
+networks:
+  ids-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:
+```
+
+#### Step 3: Build and Run
+
+```bash
+# Build image
+docker-compose build
+
+# Start services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f ids-engine
+
+# Stop services
+docker-compose down
+```
+
+### Option B: Kubernetes Deployment
+
+#### Step 1: Create Kubernetes Manifests
+
+**deployment.yaml**:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hybrid-ids
+  labels:
+    app: hybrid-ids
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hybrid-ids
+  template:
+    metadata:
+      labels:
+        app: hybrid-ids
+    spec:
+      containers:
+      - name: ids-engine
+        image: your-registry/hybrid-ids:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: FLASK_ENV
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ids-secrets
+              key: database-url
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /api/stats
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/stats
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        volumeMounts:
+        - name: models-volume
+          mountPath: /app/models
+      volumes:
+      - name: models-volume
+        persistentVolumeClaim:
+          claimName: ids-models-pvc
+```
+
+**service.yaml**:
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: hybrid-ids-service
+spec:
+  selector:
+    app: hybrid-ids
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 5000
+  type: LoadBalancer
+```
+
+**ingress.yaml**:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hybrid-ids-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - ids.yourdomain.com
+    secretName: ids-tls
+  rules:
+  - host: ids.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: hybrid-ids-service
+            port:
+              number: 80
+```
+
+#### Step 2: Deploy to Kubernetes
+
+```bash
+# Apply manifests
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+kubectl apply -f ingress.yaml
+
+# Check status
+kubectl get pods
+kubectl get services
+kubectl get ingress
+
+# View logs
+kubectl logs -f deployment/hybrid-ids
+
+# Scale deployment
+kubectl scale deployment hybrid-ids --replicas=5
+```
+
+### Option C: Cloud Deployment (AWS)
+
+#### AWS EC2 Setup
+
+```bash
+# 1. Launch EC2 instance
+aws ec2 run-instances \
+  --image-id ami-0c55b159cbfafe1f0 \
+  --instance-type t2.large \
+  --key-name your-key-pair \
+  --security-group-ids sg-xxxxxx \
+  --subnet-id subnet-xxxxxx
+
+# 2. Connect to instance
+ssh -i your-key.pem ubuntu@your-instance-ip
+
+# 3. Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# 4. Clone repository
+git clone https://github.com/yourusername/hybrid-ids.git
+cd hybrid-ids
+
+# 5. Run with Docker Compose
+sudo docker-compose up -d
+```
+
+---
+
+## 4. Configuration Guide
+
+### Environment Variables
+
+Create `.env` file:
+
+```bash
+# Flask Configuration
+FLASK_ENV=production
+FLASK_DEBUG=False
+SECRET_KEY=your-secret-key-here
+
+# Database
+DATABASE_URL=postgresql://user:password@localhost/ids_db
+
+# Redis
+REDIS_URL=redis://localhost:6379/0
+
+# Model Configuration
+MODEL_PATH=./data/models
+ML_THRESHOLD=0.5
+SIGNATURE_RULES_PATH=./signatures/snort_rules.txt
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FILE=./logs/ids.log
+
+# Security
+ALLOWED_HOSTS=localhost,yourdomain.com
+CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
+
+# Performance
+MAX_WORKERS=4
+BATCH_SIZE=1000
+BUFFER_SIZE=10000
+```
+
+### Model Configuration
+
+Edit `config.yaml`:
+
+```yaml
+models:
+  random_forest:
+    n_estimators: 100
+    max_depth: 20
+    min_samples_split: 2
+    class_weight: balanced
+  
+  gradient_boosting:
+    n_estimators: 100
+    learning_rate: 0.1
+    max_depth: 10
+
+detection:
+  signature_priority: true
+  ml_threshold: 0.5
+  fusion_method: weighted  # options: weighted, priority, voting
+
+alerts:
+  enable_email: true
+  email_recipients:
+    - admin@yourdomain.com
+  enable_syslog: true
+  syslog_server: localhost:514
+
+performance:
+  enable_gpu: false
+  batch_processing: true
+  batch_size: 1000
+  max_queue_size: 10000
+```
+
+---
+
+## 5. Testing & Validation
+
+### Unit Tests
+
+Create `tests/test_signature_detection.py`:
+
+```python
+import pytest
+from src.signature_detection import SignatureDetector
+
+def test_dos_detection():
+    detector = SignatureDetector()
+    
+    # Test case: High connection rate
+    flow = {
+        'count': 600,
+        'srv_count': 550,
+        'duration': 0.5
+    }
+    
+    detections = detector.detect_single(flow)
+    assert len(detections) > 0
+    assert detections[0]['name'] == 'DoS_High_Connection_Rate'
+
+def test_port_scan_detection():
+    detector = SignatureDetector()
+    
+    flow = {
+        'dst_host_srv_count': 30,
+        'dst_host_same_srv_rate': 0.05
+    }
+    
+    detections = detector.detect_single(flow)
+    assert len(detections) > 0
+```
+
+### Run Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=src tests/
+
+# Run specific test file
+pytest tests/test_signature_detection.py -v
+```
+
+### Performance Testing
+
+```python
+import time
+import numpy as np
+
+def benchmark_detection(model, X_test, n_iterations=1000):
+    """Benchmark detection speed"""
+    
+    start = time.time()
+    for _ in range(n_iterations):
+        predictions = model.predict(X_test)
+    end = time.time()
+    
+    avg_time = (end - start) / n_iterations
+    throughput = len(X_test) / avg_time
+    
+    print(f"Average time: {avg_time*1000:.2f} ms")
+    print(f"Throughput: {throughput:.0f} predictions/sec")
+```
+
+### Load Testing
+
+```bash
+# Install Apache Bench
+sudo apt-get install apache2-utils
+
+# Test API endpoint
+ab -n 1000 -c 10 http://localhost:5000/api/stats
+
+# Test with POST requests
+ab -n 100 -c 5 -p payload.json -T application/json http://localhost:5000/api/predict
+```
+
+---
+
+## 6. Troubleshooting
+
+### Common Issues
+
+#### Issue 1: Models Not Loading
+
+**Error**: `FileNotFoundError: models/rf_model.pkl not found`
+
+**Solution**:
+```bash
+# Train models first
+python src/anomaly_detection.py --train
+
+# Or copy pre-trained models
+cp backup/models/* data/models/
+```
+
+#### Issue 2: Port Already in Use
+
+**Error**: `Address already in use: 0.0.0.0:5000`
+
+**Solution**:
+```bash
+# Find process using port
+lsof -i :5000
+
+# Kill process
+kill -9 <PID>
+
+# Or use different port
+export FLASK_PORT=5001
+python app.py
+```
+
+#### Issue 3: Out of Memory
+
+**Error**: `MemoryError` during training
+
+**Solution**:
+```python
+# Reduce dataset size
+train_data = train_data.sample(frac=0.5)
+
+# Use batch processing
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+for chunk in pd.read_csv('data.csv', chunksize=10000):
+    scaler.partial_fit(chunk)
+```
+
+#### Issue 4: CUDA/GPU Errors
+
+**Error**: `CUDA out of memory`
+
+**Solution**:
+```python
+# Disable GPU
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+# Or reduce batch size
+config['batch_size'] = 32  # from 128
+```
+
+### Debug Mode
+
+Enable detailed logging:
+
+```python
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('debug.log'),
+        logging.StreamHandler()
+    ]
+)
+```
+
+### Performance Monitoring
+
+```bash
+# Monitor system resources
+htop
+
+# Monitor Docker containers
+docker stats
+
+# Monitor Kubernetes pods
+kubectl top pods
+```
+
+---
+
+## 7. Maintenance & Updates
+
+### Model Retraining
+
+```bash
+# Schedule weekly retraining (crontab)
+0 2 * * 0 /usr/bin/python /app/src/anomaly_detection.py --retrain
+```
+
+### Backup Strategy
+
+```bash
+#!/bin/bash
+# backup.sh
+
+BACKUP_DIR=/backups/$(date +%Y%m%d)
+mkdir -p $BACKUP_DIR
+
+# Backup models
+cp -r data/models $BACKUP_DIR/
+
+# Backup database
+pg_dump ids_db > $BACKUP_DIR/database.sql
+
+# Backup logs
+tar -czf $BACKUP_DIR/logs.tar.gz logs/
+
+echo "Backup completed: $BACKUP_DIR"
+```
+
+### Update Procedure
+
+```bash
+# 1. Pull latest changes
+git pull origin main
+
+# 2. Update dependencies
+pip install -r requirements.txt --upgrade
+
+# 3. Run migrations (if any)
+python manage.py migrate
+
+# 4. Restart service
+docker-compose restart ids-engine
+```
+
+---
+
+## 8. Additional Resources
+
+### Documentation
+- Full API Documentation: `/docs/api.md`
+- Architecture Guide: `/docs/architecture.md`
+- Security Best Practices: `/docs/security.md`
+
+### Community
+- GitHub Issues: Report bugs and request features
+- Discussion Forum: Ask questions and share insights
+- Slack Channel: Real-time support
+
+### Training Materials
+- Video Tutorials: YouTube playlist
+- Workshop Slides: `/docs/presentations/`
+- Sample Datasets: `/data/samples/`
+
+---
+
+## Success Checklist
+
+Before going to production, ensure:
+
+- [ ] All tests passing
+- [ ] Models trained and validated
+- [ ] Configuration reviewed
+- [ ] Security hardened
+- [ ] Backup system configured
+- [ ] Monitoring set up
+- [ ] Documentation updated
+- [ ] Team trained
+- [ ] Disaster recovery plan ready
+
+---
+
+## Getting Help
+
+If you encounter issues:
+
+1. Check the troubleshooting section
+2. Search existing GitHub issues
+3. Ask in the community forum
+4. Contact support: support@yourdomain.com
+
+---
+
+**🎉 Congratulations!** You've successfully set up the Hybrid IDS system!
