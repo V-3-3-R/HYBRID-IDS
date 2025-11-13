@@ -32,16 +32,18 @@ pd.DataFrame(y_train_balanced).to_csv('y_train_balanced.csv', index=False)
 
 print("✅ Processed files saved!")
 ```
-Sample Processed Data (First 5 Rows for Preview)
-Since full files are huge, here's a tiny excerpt of what train_processed.csv looks like after preprocessing (generated from your script's logic). You can expand this in your local run.
+### Sample Processed Data (First 5 Rows for Preview)
 
-duration,protocol_type,service,flag,src_bytes,dst_bytes,...,label,attack_type,attack_category
-0,1,21,4,215,182,...,normal,normal,normal
-0,2,20,5,162,0,...,normal,normal,normal
-0,1,22,4,288,288,...,normal,normal,normal
-0,1,22,4,0,0,...,normal,normal,normal
-0,2,22,5,181,0,...,normal,normal,normal
+Since full files are huge, here's a tiny excerpt of what `train_processed.csv` looks like after preprocessing (generated from your script's logic). You can expand this in your local run.
 
-Full sizes: ~10-15 MB per CSV (compressed).
-Attack Distribution (from your script's output):
-Training: normal (67,343), DoS (45,927), Probe (11,656), R2L (995), U2R (52)
+| duration | protocol_type | service | flag | src_bytes | dst_bytes | ... | label  | attack_type | attack_category |
+|----------|---------------|---------|------|-----------|-----------|-----|--------|-------------|-----------------|
+| 0        | 1             | 21      | 4    | 215       | 182       | ... | normal | normal      | normal          |
+| 0        | 2             | 20      | 5    | 162       | 0         | ... | normal | normal      | normal          |
+| 0        | 1             | 22      | 4    | 288       | 288       | ... | normal | normal      | normal          |
+| 0        | 1             | 22      | 4    | 0         | 0         | ... | normal | normal      | normal          |
+| 0        | 2             | 22      | 5    | 181       | 0         | ... | normal | normal      | normal          |
+
+- **Full sizes**: ~10-15 MB per CSV (compressed).
+- **Attack Distribution** (from your script's output):
+  - Training: normal (67,343), DoS (45,927), Probe (11,656), R2L (995), U2R (52)
